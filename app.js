@@ -1,12 +1,14 @@
 //jshint esversion:6
-require("dotenv").config();
+require("dotenv").config();//level 2
 const express=require("express");
 const ejs=require("ejs");
 const bodyParser=require("body-parser");
 const { appendFile } = require("fs");
 const mongoose=require("mongoose");
 const { Db } = require("mongodb");
-var encrypt = require('mongoose-encryption');//level 2
+// var encrypt = require('mongoose-encryption');//level 2
+const md5 =require("md5");
+
 
 const app=express();
 
@@ -24,9 +26,9 @@ const userschema=new mongoose.Schema({// i added  " new mongoose.schema(..." , f
     password:String
 });
 
-const secret= process.env.SECRET;// level 2 , it's get a secret key that called SECRET in the .env file !
+// const secret= process.env.SECRET;// level 2 , it's get a secret key that called SECRET in the .env file !
 
-userschema.plugin(encrypt,{secret: secret, encryptedFields:["password"]});//level 2
+// userschema.plugin(encrypt,{secret: secret, encryptedFields:["password"]});//level 2
 
 const User=new mongoose.model("User",userschema);
 
@@ -47,7 +49,7 @@ app.get("/register",function(req,res){
 app.post("/register",function(req,res){
     const newuser= new User({
         email: req.body.username,
-        password: req.body.password
+        password: md5(req.body.password)
     });
     newuser.save(function(err){
         if(err){
