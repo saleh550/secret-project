@@ -11,9 +11,11 @@ const { Db } = require("mongodb");
 const session=require("express-session");//level 5
 const passport=require("passport");//level 5
 const passportLocalMongoose=require("passport-local-mongoose");//level 5
+const GoogleStrategy = require('passport-google-oauth20').Strategy;//level 6
+const findOrCreate= require("mongoose-findorcreate");//level 6  
 
 
-
+ 
 const app=express();
 
 
@@ -42,11 +44,12 @@ mongoose.connect("mongodb://localhost:27017/userDB",{useNewUrlParser:true});
 
 const userschema=new mongoose.Schema({// i added  " new mongoose.schema(..." , for level 2.
     email: String,
-    password:String
+    password:String,
+    googleID: String
 });
 
 userschema.plugin(passportLocalMongoose);
-
+userschema.plugin(findOrCreate);//level 6
 
 // const secret= process.env.SECRET;// level 2 , it's get a secret key that called SECRET in the .env file !
 
@@ -56,13 +59,46 @@ const User=new mongoose.model("User",userschema);
 
 passport.use(User.createStrategy());//level 5
 
-passport.serializeUser(User.serializeUser());//level 5
-passport.deserializeUser(User.deserializeUser());//level 5
+passport.serializeUser(function(user,done){
+    done(null,user.id);
+});//level 5
+passport.deserializeUser(function(id,done){
+    User.findById(id,function(err,user){
+     done(err,user);   
+    });
+});//level 5
+
+
+//level 6
+passport.use(new GoogleStrategy({
+    clientID:process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET,
+    callbackURL: "http://localhost:3000/auth/google/secrets",
+    userProfileURL:"https://www.googleapis.com/oauth2/v3/userinfo"
+  },
+  function(accessToken, refreshToken, profile, cb) {
+    //   console.log(profile);
+    User.findOrCreate({ googleId: profile.id }, function (err, user) {
+      return cb(err, user);
+    });
+  }
+));//level 6
 
 
 app.get("/",function(req,res){
 res.render("home");
 });
+//level 6
+app.get("/auth/google",
+  passport.authenticate('google', { scope: ["profile"] }));//level 6 google users
+
+  app.get("/auth/google/secrets", 
+  passport.authenticate('google', { failureRedirect:"/login"}),
+  function(req, res) {
+    // Successful authentication, redirect home.
+    res.redirect("/secrets");
+  });
+  //level 6
 
 app.get("/login",function(req,res){
     res.render("login");
